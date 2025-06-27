@@ -1,0 +1,733 @@
+{% extends 'home.html' %} 
+<title>{% block title %}{{title}}{% endblock %}</title>
+{% load static %}
+
+<!-- CSS crítico para estabilidad del viewport -->
+<style>
+/* Estabilidad del viewport durante interacciones con selects */
+html {
+    position: relative;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
+body {
+    position: relative;
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevenir zoom accidental en iOS */
+input, select, textarea {
+    font-size: 16px !important;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* Estabilizar durante interacciones con formularios */
+.form-container {
+    position: relative;
+    z-index: 1;
+}
+</style>
+
+{% block content %}
+<section class="dark:bg-principal">
+    <div class="text-center" data-aos="fade" data-aos-delay="200">
+        <div class="sm:pt-28 lg:pt-4">
+             <h1 class="rounded-2xl  bg-indigo-500 px-2 py-1 text-white uppercase text-4xl">
+                {{ grabar|default:"Formulario de Permisos" }}
+             </h1>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="mx-4 lg:mx-20 mb-6" data-aos="fade-up">
+            <div class="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 rounded-lg max-w-4xl mx-auto">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fa-solid fa-exclamation-triangle text-red-500 text-lg"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-red-800 dark:text-red-200 font-medium">
+                            Se encontraron errores en el formulario:
+                        </h3>
+                        <div class="mt-2 text-red-700 dark:text-red-300">
+                            <ul class="list-disc list-inside space-y-1">
+                                {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6 py-4">
+            <div class="mx-4 lg:mx-20" data-aos="fade">
+                <!-- Layout adaptativo: Una columna en móvil, dos en desktop -->
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+                    
+                    <!-- COLUMNA PRINCIPAL: FORMULARIO -->
+                    <div class="xl:col-span-3">
+                        <div class="bg-white dark:bg-secundario rounded-3xl p-8" data-aos="fade-up" data-aos-delay="200">
+                            {% csrf_token %}
+                            
+                            <!-- Renderizado dinámico de campos básicos -->
+                            <div class="grid grid-cols-1 gap-6">
+                                {% for field in form %}
+                                    {% if not field.is_hidden and field.name != 'permissions' %}
+                                    <div class="field-container {% if field.errors %}has-error{% endif %}">
+                                        <label for="{{ field.id_for_label }}"
+                                            class="font-bold text-gray-800 dark:text-gray-200 text-base block mb-3">
+                                            <i class="fa-solid fa-{% if field.name == 'group' %}users{% elif field.name == 'module' %}cube{% else %}tag{% endif %} mr-2 text-blue-600 dark:text-blue-400"></i>
+                                            {{ field.label }}
+                                            {% if field.field.required %}<span class="text-red-500 ml-1">*</span>{% endif %}
+                                        </label>
+                                        
+                                        <div class="relative">
+                                            {{ field }}
+                                            {% if field.errors %}
+                                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                <i class="fa-solid fa-exclamation-circle text-red-500"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Mostrar errores del campo -->
+                                        {% if field.errors %}
+                                        <div class="mt-2 text-red-600 dark:text-red-400 text-sm">
+                                            {% for error in field.errors %}
+                                            <div class="flex items-center mt-1">
+                                                <i class="fa-solid fa-circle-exclamation text-xs mr-2"></i>
+                                                {{ error }}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <!-- Mostrar texto de ayuda si existe -->
+                                        {% if field.help_text %}
+                                        <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                            {{ field.help_text }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% elif field.is_hidden %}
+                                        {{ field }}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- SECCIÓN DE PERMISOS MEJORADA -->
+                            {% for field in form %}
+                                {% if field.name == 'permissions' %}
+                                <div class="field-container {% if field.errors %}has-error{% endif %} mt-8">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <label class="font-bold text-gray-800 dark:text-gray-200 text-base flex items-center">
+                                            <i class="fa-solid fa-shield-halved mr-2 text-green-600 dark:text-green-400"></i>
+                                            {{ field.label }}
+                                            {% if field.field.required %}<span class="text-red-500 ml-1">*</span>{% endif %}
+                                        </label>
+                                        
+                                        <!-- Botones de seleccionar todo/ninguno -->
+                                        <div class="flex gap-2">
+                                            <button type="button" onclick="selectAllPermissions()" 
+                                                class="text-xs bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 px-3 py-1 rounded-full transition-colors">
+                                                <i class="fa-solid fa-check-double mr-1"></i>Todos
+                                            </button>
+                                            <button type="button" onclick="deselectAllPermissions()" 
+                                                class="text-xs bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800 px-3 py-1 rounded-full transition-colors">
+                                                <i class="fa-solid fa-xmark mr-1"></i>Ninguno
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                        <!-- Permisos inicialmente visibles -->
+                                        <div class="permissions-grid-visible grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                            {% for choice in field|slice:":6" %}
+                                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-3 transition-colors border border-transparent hover:border-gray-300 dark:hover:border-gray-500 group">
+                                                {{ choice.tag }}
+                                                <span class="text-sm text-gray-700 dark:text-gray-300 font-medium group-hover:text-gray-900 dark:group-hover:text-gray-100">{{ choice.choice_label }}</span>
+                                            </label>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <!-- Permisos adicionales (inicialmente ocultos) -->
+                                        {% if field|length > 6 %}
+                                        <div id="additional-permissions" class="hidden">
+                                            <div class="border-t border-gray-300 dark:border-gray-600 pt-4">
+                                                <div class="permissions-grid-hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {% for choice in field|slice:"6:" %}
+                                                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-3 transition-colors border border-transparent hover:border-gray-300 dark:hover:border-gray-500 group">
+                                                        {{ choice.tag }}
+                                                        <span class="text-sm text-gray-700 dark:text-gray-300 font-medium group-hover:text-gray-900 dark:group-hover:text-gray-100">{{ choice.choice_label }}</span>
+                                                    </label>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Botón mostrar/ocultar permisos adicionales -->
+                                        <button type="button" id="toggle-permissions-btn" onclick="toggleAdditionalPermissions()" 
+                                            class="w-full bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 py-2 px-4 rounded-lg transition-colors flex items-center justify-center">
+                                            <i class="fa-solid fa-chevron-down mr-2" id="toggle-icon"></i>
+                                            <span id="toggle-text">Mostrar {{ field|length|add:"-6" }} permisos más</span>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Mostrar errores del campo -->
+                                    {% if field.errors %}
+                                    <div class="mt-2 text-red-600 dark:text-red-400 text-sm">
+                                        {% for error in field.errors %}
+                                        <div class="flex items-center mt-1">
+                                            <i class="fa-solid fa-circle-exclamation text-xs mr-2"></i>
+                                            {{ error }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- Botones de acción -->
+                            <div class="flex flex-col sm:flex-row justify-end items-center mt-8 space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200 dark:border-gray-600">
+                                <button type="submit"
+                                    class="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-8 rounded-lg flex items-center justify-center transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                                    <i class="fa-solid fa-save mr-2"></i>{{ grabar|default:"Guardar Configuración" }}
+                                </button>
+                                <a class="w-full sm:w-auto bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white py-3 px-6 rounded-lg flex items-center justify-center transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                                    href="{{ back_url }}">
+                                    <i class="fa-solid fa-arrow-left mr-2"></i>Volver
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- COLUMNA SECUNDARIA: VISTA PREVIA -->
+                    <div class="xl:col-span-2">
+                        <div class="sticky top-4">
+                            <div id="preview-container">
+                                <!-- La vista previa se generará dinámicamente con JavaScript -->
+                                <div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 h-full border border-blue-200 dark:border-gray-600">
+                                    <h3 class="text-xl font-bold mb-6 text-gray-800 dark:text-gray-200 flex items-center">
+                                        <i class="fa-solid fa-eye mr-3 text-blue-600"></i>Vista Previa
+                                    </h3>
+                                    
+                                    {% if is_editing %}
+                                    <div class="mb-4 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-300 dark:border-blue-700">
+                                        <div class="flex items-center text-blue-800 dark:text-blue-300">
+                                            <i class="fa-solid fa-info-circle mr-2"></i>
+                                            <span class="text-sm font-medium">Modo edición: Configuración actual cargada</span>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="text-gray-500 dark:text-gray-400 text-sm italic">
+                                        <i class="fa-solid fa-info-circle mr-2"></i>
+                                        {% if is_editing %}
+                                        Modifica grupo, módulo y permisos para actualizar la vista previa
+                                        {% else %}
+                                        Selecciona grupo, módulo y permisos para ver la vista previa
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- CSS para estilos de error y campos especiales -->
+<style>
+.field-container.has-error input,
+.field-container.has-error select,
+.field-container.has-error textarea {
+    border-color: #ef4444 !important;
+    background-color: rgba(254, 242, 242, 0.5) !important;
+    color: #991b1b !important;
+}
+.field-container.has-error input:focus,
+.field-container.has-error select:focus,
+.field-container.has-error textarea:focus {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+    outline: none !important;
+}
+@media (prefers-color-scheme: dark) {
+    .field-container.has-error input,
+    .field-container.has-error select,
+    .field-container.has-error textarea {
+        background-color: rgba(153, 27, 27, 0.2) !important;
+        color: #fca5a5 !important;
+        border-color: #ef4444 !important;
+    }
+    .field-container.has-error input:focus,
+    .field-container.has-error select:focus,
+    .field-container.has-error textarea:focus {
+        box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.4) !important;
+    }
+}
+.field-container.has-error input[type="checkbox"] {
+    border-color: #ef4444 !important;
+    accent-color: #ef4444 !important;
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+.field-container.has-error {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Estilos mejorados para checkboxes múltiples */
+.field-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+/* Mejor aspecto visual para los campos de permisos */
+.field-container label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    font-weight: normal;
+    text-transform: none;
+    font-size: 0.875rem;
+}
+
+.field-container label:has(input[type="checkbox"]):hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Estilo especial para textarea */
+.field-container textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Indicador visual para campos requeridos */
+.field-container label span.text-red-500 {
+    color: #ef4444;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+/* ===== ESTILOS ANTI-SCROLL PARA SELECTS ===== */
+
+/* Prevenir scroll automático en elementos select */
+select {
+    scroll-margin: 0 !important;
+    scroll-behavior: auto !important;
+    /* Hacer el select más accesible */
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important; /* Previene zoom automático en iOS */
+    line-height: 1.5 !important;
+    border-radius: 8px !important;
+    border: 2px solid #d1d5db !important;
+    background-color: #ffffff !important;
+    transition: all 0.2s ease !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-position: right 12px center !important;
+    background-repeat: no-repeat !important;
+    background-size: 16px !important;
+    padding-right: 40px !important;
+    cursor: pointer !important;
+}
+
+/* Estados del select */
+select:focus {
+    outline: none !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    background-color: #ffffff !important;
+}
+
+select:hover:not(:focus) {
+    border-color: #6b7280 !important;
+    background-color: #f9fafb !important;
+}
+
+/* Eliminar estilos que pueden causar scroll */
+select:focus-visible {
+    outline: none !important;
+}
+
+/* Mantener el contenedor en su lugar */
+.field-container {
+    position: relative !important;
+    z-index: auto !important;
+}
+
+/* Evitar que el navegador haga scroll automático */
+.field-container select {
+    scroll-snap-stop: always !important;
+    overscroll-behavior: contain !important;
+}
+
+/* Asegurar que el dropdown no cause scroll */
+.field-container select option {
+    padding: 8px 12px !important;
+    font-size: 16px !important;
+}
+
+/* Mejoras para dark mode */
+@media (prefers-color-scheme: dark) {
+    select {
+        background-color: #1f2937 !important;
+        border-color: #4b5563 !important;
+        color: #f3f4f6 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%9ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    }
+    
+    select:focus {
+        background-color: #1f2937 !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    select:hover:not(:focus) {
+        background-color: #374151 !important;
+        border-color: #6b7280 !important;
+    }
+}
+
+/* Mejoras adicionales para dispositivos móviles */
+@media (max-width: 768px) {
+    select {
+        font-size: 16px !important; /* Crítico para evitar zoom en iOS */
+        min-height: 52px !important;
+        padding: 14px 16px !important;
+    }
+}
+
+/* Evitar transiciones durante la interacción */
+body.select-interacting * {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Mantener el viewport estable */
+html {
+    scroll-behavior: auto !important;
+}
+
+body {
+    overscroll-behavior: contain !important;
+}
+
+/* Mejorar la accesibilidad del label */
+.field-container label {
+    display: block !important;
+    margin-bottom: 8px !important;
+    font-weight: 600 !important;
+    color: #1f2937 !important; /* Texto más oscuro en modo claro */
+    cursor: pointer !important;
+    font-size: 14px !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    .field-container label {
+        color: #d1d5db !important;
+    }
+}
+
+/* Mejoras para los botones de formulario */
+button[type="submit"], .btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.025em !important;
+    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.3) !important;
+}
+
+button[type="submit"]:hover, .btn-primary:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Mejorar contraste de los checkboxes en modo claro */
+input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    accent-color: #10b981 !important;
+    border: 2px solid #d1d5db !important;
+    border-radius: 4px !important;
+}
+
+input[type="checkbox"]:checked {
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
+}
+
+/* Estilos mejorados para los labels de permisos */
+.field-container label:has(input[type="checkbox"]) {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 0 !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
+    font-size: 14px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    color: #374151 !important;
+}
+
+.field-container label:has(input[type="checkbox"]):hover {
+    background-color: #f3f4f6 !important;
+    border-color: #10b981 !important;
+    color: #059669 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.field-container label:has(input[type="checkbox"]:checked) {
+    background-color: #ecfdf5 !important;
+    border-color: #10b981 !important;
+    color: #065f46 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    .field-container label:has(input[type="checkbox"]) {
+        background-color: #374151 !important;
+        border-color: #4b5563 !important;
+        color: #d1d5db !important;
+    }
+    
+    .field-container label:has(input[type="checkbox"]):hover {
+        background-color: #4b5563 !important;
+        border-color: #10b981 !important;
+        color: #10b981 !important;
+    }
+    
+    .field-container label:has(input[type="checkbox"]:checked) {
+        background-color: #064e3b !important;
+        border-color: #10b981 !important;
+        color: #6ee7b7 !important;
+    }
+}
+</style>
+
+<!-- ===== JAVASCRIPT MEJORADO PARA SELECTS Y VISTA PREVIA ===== -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables de control para scroll
+    let originalScrollPosition = 0;
+    let isSelectActive = false;
+    
+    // Función suave para prevenir scroll en selects
+    function handleSelectFocus(e) {
+        if (e.target.tagName === 'SELECT') {
+            originalScrollPosition = window.pageYOffset;
+            isSelectActive = true;
+            
+            // Pequeño delay para evitar scroll automático
+            setTimeout(function() {
+                if (Math.abs(window.pageYOffset - originalScrollPosition) > 100) {
+                    window.scrollTo(0, originalScrollPosition);
+                }
+                isSelectActive = false;
+            }, 100);
+        }
+    }
+    
+    // Escuchar eventos de focus en selects
+    document.addEventListener('focus', handleSelectFocus, true);
+    document.addEventListener('click', handleSelectFocus, true);
+    
+    // ===== FUNCIONALIDAD DE VISTA PREVIA =====
+    function updatePreview() {
+        const groupSelect = document.querySelector('select[name="group"]');
+        const moduleSelect = document.querySelector('select[name="module"]');
+        const permissionsCheckboxes = document.querySelectorAll('input[name="permissions"]:checked');
+        
+        const previewContainer = document.getElementById('preview-container');
+        if (!previewContainer) return;
+        
+        let previewHTML = '<div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 h-full border border-blue-200 dark:border-gray-600">';
+        previewHTML += '<h3 class="text-xl font-bold mb-6 text-gray-800 dark:text-gray-200 flex items-center"><i class="fa-solid fa-eye mr-3 text-blue-600"></i>Vista Previa</h3>';
+        
+        // Mostrar grupo seleccionado
+        if (groupSelect && groupSelect.value) {
+            const groupText = groupSelect.options[groupSelect.selectedIndex].text;
+            previewHTML += `
+                <div class="mb-6 p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border-l-4 border-purple-500">
+                    <h4 class="font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                        <i class="fa-solid fa-users mr-2 text-purple-600"></i>Grupo:
+                    </h4>
+                    <span class="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium px-4 py-2 rounded-full shadow-sm">
+                        ${groupText}
+                    </span>
+                </div>
+            `;
+        }
+        
+        // Mostrar módulo seleccionado
+        if (moduleSelect && moduleSelect.value) {
+            const moduleText = moduleSelect.options[moduleSelect.selectedIndex].text;
+            previewHTML += `
+                <div class="mb-6 p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border-l-4 border-blue-500">
+                    <h4 class="font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                        <i class="fa-solid fa-cube mr-2 text-blue-600"></i>Módulo:
+                    </h4>
+                    <span class="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium px-4 py-2 rounded-full shadow-sm">
+                        ${moduleText}
+                    </span>
+                </div>
+            `;
+        }
+        
+        // Mostrar permisos seleccionados
+        previewHTML += `
+            <div class="mb-6 p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border-l-4 border-green-500">
+                <h4 class="font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                    <i class="fa-solid fa-shield-check mr-2 text-green-600"></i>Permisos Seleccionados:
+                </h4>
+                <div class="space-y-2 max-h-60 overflow-y-auto">
+        `;
+        
+        if (permissionsCheckboxes.length > 0) {
+            permissionsCheckboxes.forEach(checkbox => {
+                const label = checkbox.closest('label')?.querySelector('span')?.textContent || checkbox.value;
+                previewHTML += `
+                    <div class="flex items-center bg-green-50 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-700">
+                        <i class="fa-solid fa-check-circle text-green-600 dark:text-green-400 mr-3"></i>
+                        <span class="text-sm font-medium text-green-800 dark:text-green-300">${label}</span>
+                    </div>
+                `;
+            });
+        } else {
+            previewHTML += `
+                <div class="text-gray-500 dark:text-gray-400 text-sm italic p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                    <i class="fa-solid fa-info-circle mr-2"></i>No hay permisos seleccionados
+                </div>
+            `;
+        }
+        
+        previewHTML += '</div></div>';
+        
+        // Resumen estadístico
+        const totalPermissions = permissionsCheckboxes.length;
+        previewHTML += `
+            <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-gray-700 p-3 rounded-lg text-center shadow-sm">
+                        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalPermissions}</div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400">Permisos</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-700 p-3 rounded-lg text-center shadow-sm">
+                        <div class="text-2xl font-bold text-green-600 dark:text-green-400">
+                            ${groupSelect?.value && moduleSelect?.value ? '✓' : '○'}
+                        </div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400">Estado</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        previewHTML += '</div>';
+        previewContainer.innerHTML = previewHTML;
+    }
+    
+    // Escuchar cambios en el formulario
+    document.addEventListener('change', function(e) {
+        if (e.target.tagName === 'SELECT' || e.target.type === 'checkbox') {
+            updatePreview();
+        }
+    });
+    
+    // Actualizar vista previa inicial
+    setTimeout(function() {
+        updatePreview();
+        initializePermissionCounters();
+    }, 100);
+    
+    // Datos para modo edición
+    {% if is_editing %}
+    console.log('Modo edición activo - Configuración actual cargada');
+    {% endif %}
+    
+    // ===== FUNCIONES PARA MANEJO DE PERMISOS =====
+    
+    // Seleccionar todos los permisos
+    window.selectAllPermissions = function() {
+        const checkboxes = document.querySelectorAll('input[name="permissions"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updatePreview();
+    };
+    
+    // Deseleccionar todos los permisos
+    window.deselectAllPermissions = function() {
+        const checkboxes = document.querySelectorAll('input[name="permissions"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updatePreview();
+    };
+    
+    // Mostrar/ocultar permisos adicionales
+    window.toggleAdditionalPermissions = function() {
+        const additionalDiv = document.getElementById('additional-permissions');
+        const toggleBtn = document.getElementById('toggle-permissions-btn');
+        const toggleIcon = document.getElementById('toggle-icon');
+        const toggleText = document.getElementById('toggle-text');
+        
+        if (!additionalDiv || !toggleBtn) return;
+        
+        const isHidden = additionalDiv.classList.contains('hidden');
+        
+        if (isHidden) {
+            // Mostrar permisos adicionales
+            additionalDiv.classList.remove('hidden');
+            toggleIcon.classList.remove('fa-chevron-down');
+            toggleIcon.classList.add('fa-chevron-up');
+            toggleText.textContent = 'Ocultar permisos adicionales';
+        } else {
+            // Ocultar permisos adicionales
+            additionalDiv.classList.add('hidden');
+            toggleIcon.classList.remove('fa-chevron-up');
+            toggleIcon.classList.add('fa-chevron-down');
+            const additionalCount = document.querySelectorAll('.permissions-grid-hidden input').length;
+            toggleText.textContent = `Mostrar ${additionalCount} permisos más`;
+        }
+    };
+    
+    // Inicializar contadores de permisos
+    function initializePermissionCounters() {
+        const totalCheckboxes = document.querySelectorAll('input[name="permissions"]').length;
+        const visibleCheckboxes = document.querySelectorAll('.permissions-grid-visible input').length;
+        const hiddenCheckboxes = totalCheckboxes - visibleCheckboxes;
+        
+        const toggleText = document.getElementById('toggle-text');
+        if (toggleText && hiddenCheckboxes > 0) {
+            toggleText.textContent = `Mostrar ${hiddenCheckboxes} permisos más`;
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,717 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+
+<style>
+:root {
+    --primary: #0F4C75; /* Azul petróleo */
+    --secondary: #FFD700; /* Dorado */
+    --background: #F9FAFB; /* Fondo claro */
+    --surface: #FFFFFF;
+    --text-main: #1F2937; /* Texto principal */
+    --text-secondary: #64748B;
+    --shadow: 0 4px 24px rgba(15, 76, 117, 0.08);
+}
+
+body {
+    background: var(--background);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Layout principal */
+.medical-gradient {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+}
+
+/* Sidebar estilos */
+.sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+    background-color: #CBD5E1;
+    border-radius: 2px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #94A3B8;
+}
+
+/* Animaciones para módulos */
+.module-card {
+    animation: fadeInUp 0.6s ease-out;
+    animation-fill-mode: both;
+}
+
+.module-card:nth-child(1) { animation-delay: 0.1s; }
+.module-card:nth-child(2) { animation-delay: 0.15s; }
+.module-card:nth-child(3) { animation-delay: 0.2s; }
+.module-card:nth-child(4) { animation-delay: 0.25s; }
+.module-card:nth-child(5) { animation-delay: 0.3s; }
+.module-card:nth-child(6) { animation-delay: 0.35s; }
+.module-card:nth-child(7) { animation-delay: 0.4s; }
+.module-card:nth-child(8) { animation-delay: 0.45s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 30px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+/* Hover effects mejorados */
+.hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Estilos para truncar texto */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Responsive mejoras */
+@media (max-width: 1024px) {
+    .w-80 {
+        width: 16rem; /* Sidebar más estrecho en tablets */
+    }
+}
+
+@media (max-width: 768px) {
+    .w-80 {
+        position: fixed;
+        left: -100%;
+        z-index: 50;
+        height: 100vh;
+        transition: left 0.3s ease-in-out;
+    }
+    
+    .sidebar-open .w-80 {
+        left: 0;
+    }
+    
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+    
+    .sidebar-open .sidebar-overlay {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* --- Modo oscuro --- */
+.dark-mode {
+    --primary: #3282B8; /* Azul más claro */
+    --secondary: #FBBF24; /* Amarillo dorado suave */  
+    --background: #0F172A; /* Fondo oscuro */
+    --surface: #1E293B;
+    --text-main: #E2E8F0; /* Texto principal */
+    --text-secondary: #CBD5E1;
+    --shadow: 0 4px 24px rgba(50, 130, 184, 0.10);
+}
+
+.dark-mode body {
+    background: var(--background) !important;
+    color: var(--text-main) !important;
+}
+
+/* Mejoras para la accesibilidad */
+.focus\:ring-2:focus {
+    box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+/* Transiciones suaves */
+* {
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Loading states */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Carrusel miniature styles */
+.carousel-indicator.opacity-60 {
+    opacity: 0.6;
+}
+
+.carousel-indicator.opacity-100 {
+    opacity: 1;
+    background-color: #3B82F6;
+}
+</style>
+
+{% block content %}
+<div class="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <!-- Sidebar Izquierdo - Lista de Módulos -->
+    <div class="w-80 bg-white dark:bg-gray-800 shadow-xl border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <!-- Header del Sidebar -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="medical-gradient rounded-xl p-4 text-white text-center mb-4">
+                <h2 class="text-xl font-bold">Clinic Pro</h2>
+                <p class="text-sm opacity-90">Sistema Médico</p>
+            </div>
+            
+            <!-- Stats Rápidas -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">89</div>
+                    <div class="text-xs text-blue-600 dark:text-blue-400">Citas Hoy</div>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-green-600 dark:text-green-400">23</div>
+                    <div class="text-xs text-green-600 dark:text-green-400">Pendientes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Navegación Rápida -->
+        <div class="flex-1 overflow-y-auto p-4">
+            <div class="mb-4">
+                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                    Acceso Rápido
+                </h3>
+                
+                {% if user.is_authenticated %}
+                    {% for menu_item in menu_list %}
+                        <div class="mb-6">
+                            <!-- Título del Menú en Sidebar -->
+                            <div class="flex items-center mb-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                {% if menu_item.menu.icon %}
+                                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                        <i class="{{ menu_item.menu.icon }} text-white text-sm"></i>
+                                    </div>
+                                {% endif %}
+                                <span class="font-semibold text-gray-700 dark:text-gray-300 text-sm">{{ menu_item.menu.name }}</span>
+                            </div>
+                            
+                            <!-- Lista de Módulos del Menú -->
+                            {% for module_permission in menu_item.group_module_permission_list %}
+                                <a href="{% if module_permission.module.url %}{{ module_permission.module.url }}{% else %}#{% endif %}" 
+                                   class="flex items-center p-3 mb-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 group">
+                                    <div class="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
+                                        {% if module_permission.module.icon %}
+                                            <i class="{{ module_permission.module.icon }} text-white text-sm"></i>
+                                        {% else %}
+                                            <i class="fas fa-cube text-white text-sm"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                            {{ module_permission.module.name }}
+                                        </div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            {% if module_permission.module.description %}
+                                                {{ module_permission.module.description|truncatechars:40 }}
+                                            {% else %}
+                                                Acceso rápido al módulo
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-arrow-right text-gray-400 group-hover:text-blue-500 text-xs opacity-0 group-hover:opacity-100 transition-all"></i>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer del Sidebar -->
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                <span>{{ user.get_full_name|default:user.username }}</span>
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área Principal Derecha -->
+    <div class="flex-1 flex flex-col">
+        <!-- Header Superior -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Médico</h1>
+                    <p class="text-gray-600 dark:text-gray-400">Bienvenido, gestiona tu práctica médica de forma eficiente</p>
+                </div>
+                
+                <!-- Mini Carrusel en Header -->
+                <div class="w-48 h-24 relative">
+                    <div id="promo-carousel" class="overflow-hidden rounded-lg w-full h-full shadow-lg relative">
+                        <div class="carousel-slide transition-all duration-700 ease-in-out absolute inset-0">
+                            <img src="{% static 'img/carrusel1.png' %}" alt="Promoción 1" class="w-full h-full object-cover rounded-lg">
+                        </div>
+                        <div class="carousel-slide hidden transition-all duration-700 ease-in-out absolute inset-0">
+                            <img src="{% static 'img/carrusel2.png' %}" alt="Promoción 2" class="w-full h-full object-cover rounded-lg">
+                        </div>
+                        <div class="carousel-slide hidden transition-all duration-700 ease-in-out absolute inset-0">
+                            <img src="{% static 'img/carrusel3.png' %}" alt="Promoción 3" class="w-full h-full object-cover rounded-lg">
+                        </div>
+                        <!-- Indicadores pequeños -->
+                        <div class="flex justify-center space-x-1 absolute bottom-1 left-0 right-0">
+                            <span class="carousel-indicator w-1.5 h-1.5 bg-white rounded-full cursor-pointer opacity-60" data-slide="0"></span>
+                            <span class="carousel-indicator w-1.5 h-1.5 bg-white rounded-full cursor-pointer opacity-60" data-slide="1"></span>
+                            <span class="carousel-indicator w-1.5 h-1.5 bg-white rounded-full cursor-pointer opacity-60" data-slide="2"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de Contenido Principal -->
+        <main class="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900">
+
+            <!-- Stats Grid Superior -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Usuarios</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">1,234</p>
+                            <p class="text-xs text-green-600 dark:text-green-400">+12% vs mes anterior</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Citas Hoy</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">89</p>
+                            <p class="text-xs text-orange-600 dark:text-orange-400">23 pendientes</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Consultas</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">156</p>
+                            <p class="text-xs text-blue-600 dark:text-blue-400">Esta semana</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Ingresos</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">$45,230</p>
+                            <p class="text-xs text-green-600 dark:text-green-400">+8% vs mes anterior</p>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Módulos por Grupos -->
+            {% if user.is_authenticated %}
+                <div class="space-y-8">
+                    {% for menu_item in menu_list %}
+                        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <!-- Header del Grupo -->
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center">
+                                    {% if menu_item.menu.icon %}
+                                        <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mr-4">
+                                            <i class="{{ menu_item.menu.icon }} text-white text-lg"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ menu_item.menu.name }}</h2>
+                                        {% if menu_item.menu.description %}
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ menu_item.menu.description }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    {{ menu_item.group_module_permission_list|length }} módulo{{ menu_item.group_module_permission_list|length|pluralize }}
+                                </div>
+                            </div>
+
+                            <!-- Grid de Módulos -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {% for module_permission in menu_item.group_module_permission_list %}
+                                    <a href="{% if module_permission.module.url %}{{ module_permission.module.url }}{% else %}#{% endif %}" 
+                                       class="module-card bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md">
+                                        
+                                        <!-- Contenido del Módulo -->
+                                        <div class="flex items-start space-x-3">
+                                            <!-- Icono -->
+                                            <div class="w-10 h-10 
+                                                {% cycle 'bg-blue-600' 'bg-green-600' 'bg-purple-600' 'bg-orange-600' 'bg-pink-600' 'bg-indigo-600' %}
+                                                rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                {% if module_permission.module.icon %}
+                                                    <i class="{{ module_permission.module.icon }} text-white text-sm"></i>
+                                                {% else %}
+                                                    <i class="fas fa-cube text-white text-sm"></i>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <!-- Información -->
+                                            <div class="flex-1 min-w-0">
+                                                <h3 class="font-semibold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                    {{ module_permission.module.name }}
+                                                </h3>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                                    {% if module_permission.module.description %}
+                                                        {{ module_permission.module.description|truncatechars:60 }}
+                                                    {% else %}
+                                                        Accede a {{ module_permission.module.name|lower }}
+                                                    {% endif %}
+                                                </p>
+                                                
+                                                <!-- Badge de estado -->
+                                                <div class="flex items-center justify-between mt-3">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                        <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                        Activo
+                                                    </span>
+                                                    <i class="fas fa-arrow-right text-gray-400 group-hover:text-blue-500 text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% empty %}
+                                    <div class="col-span-full text-center py-8">
+                                        <div class="text-gray-400 dark:text-gray-500">No hay módulos disponibles en este grupo</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-cube text-gray-400 text-xl"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No hay módulos disponibles</h3>
+                            <p class="text-gray-500 dark:text-gray-400">Contacta al administrador para obtener acceso a módulos</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-lock text-blue-600 dark:text-blue-400 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Acceso Requerido</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Inicia sesión para acceder a los módulos del sistema</p>
+                </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<style>
+/* Custom animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 40px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translate3d(30px, 0, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .8;
+    }
+}
+
+.module-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.module-card:nth-child(1) { animation-delay: 0.1s; }
+.module-card:nth-child(2) { animation-delay: 0.2s; }
+.module-card:nth-child(3) { animation-delay: 0.3s; }
+.module-card:nth-child(4) { animation-delay: 0.4s; }
+.module-card:nth-child(5) { animation-delay: 0.5s; }
+.module-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Hover effects */
+.module-card:hover .gradient-icon {
+    animation: pulse 2s infinite;
+}
+
+/* Backdrop blur effect */
+.backdrop-blur-lg {
+    backdrop-filter: blur(16px);
+}
+</style>
+
+
+
+<!-- Ripple effect styles -->
+<style>
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(0);
+    animation: ripple-animation 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes ripple-animation {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+button {
+    position: relative;
+    overflow: hidden;
+}
+</style>
+
+<!-- Carrusel automático funcional -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const slides = document.querySelectorAll('#promo-carousel .carousel-slide');
+    const indicators = document.querySelectorAll('#promo-carousel .carousel-indicator');
+    let currentSlide = 0;
+    let carouselInterval;
+    let isAnimating = false;
+
+    // Add animation classes
+    slides.forEach(slide => {
+        slide.style.transition = 'opacity 0.7s cubic-bezier(.4,0,.2,1), transform 0.7s cubic-bezier(.4,0,.2,1)';
+        slide.style.opacity = 0;
+        slide.style.zIndex = 1;
+        slide.style.transform = 'scale(0.96) translateY(20px)';
+    });
+
+    function showSlide(idx, direction = 1) {
+        if (isAnimating || idx === currentSlide) return;
+        isAnimating = true;
+
+        const prev = currentSlide;
+        const next = idx;
+
+        // Hide previous
+        slides[prev].style.zIndex = 1;
+        slides[prev].style.opacity = 0;
+        slides[prev].style.transform = `scale(0.96) translateY(${direction > 0 ? '-20px' : '20px'})`;
+        slides[prev].classList.add('hidden');
+
+        // Show next
+        slides[next].classList.remove('hidden');
+        slides[next].style.zIndex = 2;
+        slides[next].style.opacity = 0;
+        slides[next].style.transform = `scale(0.96) translateY(${direction > 0 ? '20px' : '-20px'})`;
+
+        setTimeout(() => {
+            slides[next].style.opacity = 1;
+            slides[next].style.transform = 'scale(1) translateY(0)';
+        }, 10);
+
+        // Update indicators
+        indicators.forEach((ind, i) => {
+            if (i === next) {
+                ind.classList.remove('opacity-60');
+                ind.classList.add('opacity-100');
+                ind.style.backgroundColor = '#3B82F6';
+            } else {
+                ind.classList.remove('opacity-100');
+                ind.classList.add('opacity-60');
+                ind.style.backgroundColor = '#ffffff';
+            }
+        });
+
+        setTimeout(() => {
+            slides[prev].style.zIndex = 1;
+            slides[next].style.zIndex = 2;
+            currentSlide = next;
+            isAnimating = false;
+        }, 700);
+    }
+
+    function goToSlide(idx) {
+        if (idx === currentSlide) return;
+        showSlide(idx, idx > currentSlide ? 1 : -1);
+        resetCarouselInterval();
+    }
+
+    indicators.forEach((indicator, idx) => {
+        indicator.addEventListener('click', () => goToSlide(idx));
+    });
+
+    function nextSlide() {
+        let next = (currentSlide + 1) % slides.length;
+        showSlide(next, 1);
+    }
+
+    function resetCarouselInterval() {
+        clearInterval(carouselInterval);
+        carouselInterval = setInterval(nextSlide, 4000);
+    }
+
+    // Init
+    slides.forEach((slide, i) => {
+        slide.classList.toggle('hidden', i !== 0);
+        slide.style.opacity = i === 0 ? 1 : 0;
+        slide.style.transform = i === 0 ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(20px)';
+        slide.style.zIndex = i === 0 ? 2 : 1;
+    });
+    
+    // Init indicators
+    indicators.forEach((ind, i) => {
+        if (i === 0) {
+            ind.classList.add('opacity-100');
+            ind.style.backgroundColor = '#3B82F6';
+        } else {
+            ind.classList.add('opacity-60');
+            ind.style.backgroundColor = '#ffffff';
+        }
+    });
+    
+    carouselInterval = setInterval(nextSlide, 4000);
+
+    // Sidebar mobile functionality
+    function initMobileSidebar() {
+        const sidebarToggle = document.createElement('button');
+        sidebarToggle.innerHTML = `
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        `;
+        sidebarToggle.className = 'md:hidden fixed top-4 left-4 z-50 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700';
+        
+        const sidebarOverlay = document.createElement('div');
+        sidebarOverlay.className = 'sidebar-overlay';
+        
+        document.body.appendChild(sidebarToggle);
+        document.body.appendChild(sidebarOverlay);
+        
+        const sidebar = document.querySelector('.w-80');
+        
+        sidebarToggle.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-open');
+        });
+        
+        sidebarOverlay.addEventListener('click', () => {
+            document.body.classList.remove('sidebar-open');
+        });
+
+        // Close sidebar when clicking on a link (mobile)
+        const sidebarLinks = sidebar.querySelectorAll('a');
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    document.body.classList.remove('sidebar-open');
+                }
+            });
+        });
+    }
+
+    // Initialize mobile sidebar if needed
+    if (window.innerWidth < 768) {
+        initMobileSidebar();
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 768) {
+            document.body.classList.remove('sidebar-open');
+        }
+    });
+
+    // Add smooth scroll behavior
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+
+    // Add loading states for module cards
+    const moduleCards = document.querySelectorAll('.module-card');
+    moduleCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+});
+</script>
+{% endblock content %}
+
